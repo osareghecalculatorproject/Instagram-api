@@ -1,9 +1,22 @@
 import express from "express";
-import puppeteer from "puppeteer";
-import fetch from "node-fetch";
+import path from "path";
+import { fileURLToPath } from "url";
+import puppeteer from "puppeteer"; // ← make sure this import is here
+import fetch from "node-fetch"; // ← needed for downloading media
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// --- Serve frontend files ---
+app.use(express.static(path.join(__dirname, "frontend")));
+
+// --- Catch-all route to serve index.html ---
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+});
 
 // --- Reuse a single browser instance for speed ---
 let browser;
@@ -88,4 +101,4 @@ app.get("/", (req, res) => {
   res.send("✅ Instagram Downloader API is running. Use /info or /download.");
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
