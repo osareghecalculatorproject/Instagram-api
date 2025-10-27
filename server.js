@@ -14,8 +14,9 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "frontend")));
 
 // --- Catch-all route to serve index.html ---
+// ✅ Compatible with Express 5
 app.get("/*", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+  res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
 
 // --- Reuse a single browser instance for speed ---
