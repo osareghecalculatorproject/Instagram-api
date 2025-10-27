@@ -1,8 +1,8 @@
 import express from "express";
+import puppeteer from "puppeteer";
+import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import puppeteer from "puppeteer"; // ← make sure this import is here
-import fetch from "node-fetch"; // ← needed for downloading media
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,24 +10,10 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// --- Serve frontend files ---
+// Serve frontend
 app.use(express.static(path.join(__dirname, "frontend")));
 
-// --- Catch-all route to serve index.html ---
-// ✅ Compatible with Express 5
-// ✅ works on Express 5 and Node 22
-import { fileURLToPath } from "url";
-import path from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Catch-all route using regex
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
-});
-
-// --- Reuse a single browser instance for speed ---
+// Puppeteer reuse
 let browser;
 async function getBrowser() {
   if (!browser) {
@@ -39,7 +25,7 @@ async function getBrowser() {
   return browser;
 }
 
-// --- Extract Instagram media ---
+// Scrape function
 async function scrapeInstagram(url) {
   const browser = await getBrowser();
   const page = await browser.newPage();
@@ -67,11 +53,10 @@ async function scrapeInstagram(url) {
   };
 }
 
-// --- Return media info only ---
+// API routes
 app.get("/info", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "Missing ?url=" });
-
   try {
     const data = await scrapeInstagram(url);
     res.json(data);
@@ -81,7 +66,6 @@ app.get("/info", async (req, res) => {
   }
 });
 
-// --- Download actual media ---
 app.get("/download", async (req, res) => {
   const { url, type = "image" } = req.query;
   if (!url) return res.status(400).json({ error: "Missing ?url=" });
@@ -106,8 +90,9 @@ app.get("/download", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("✅ Instagram Downloader API is running. Use /info or /download.");
+// ✅ Catch-all (Express 5 compatible)
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
