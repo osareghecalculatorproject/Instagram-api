@@ -1,102 +1,63 @@
 import express from "express";
-import puppeteer from "puppeteer";
 import fetch from "node-fetch";
+import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
+// Fix __dirname in ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve frontend
+// Middleware
+app.use(cors());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "frontend")));
 
-// Puppeteer reuse
-let browser;
-async function getBrowser() {
-  if (!browser) {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-  return browser;
-}
-
-// Scrape function
-async function scrapeInstagram(url) {
-  const cleanUrl = url.split("?")[0]; // remove ?utm_source etc.
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119 Safari/537.36"
-  );
-
-  await page.goto(cleanUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
-
-  // Wait for meta tags to appear
-  await page.waitForSelector("meta[property='og:image']", { timeout: 15000 }).catch(() => {});
-
-  const meta = await page.evaluate(() => {
-    const tags = {};
-    document.querySelectorAll("meta[property^='og:']").forEach((el) => {
-      tags[el.getAttribute("property")] = el.getAttribute("content");
-    });
-    return tags;
-  });
-
-  await page.close();
-
-  return {
-    image: meta["og:image"] || null,
-    video: meta["og:video"] || null,
-    caption: meta["og:description"] || null,
-  };
-}
-
-// API routes
-app.get("/info", async (req, res) => {
+// --- Instagram oEmbed Endpoint ---
+app.get("/api/scrape", async (req, res) => {
   const { url } = req.query;
-  if (!url) return res.status(400).json({ error: "Missing ?url=" });
+
+  if (!url) {
+    return res.status(400).json({ error: "Missing URL parameter" });
+  }
+
   try {
-    const data = await scrapeInstagram(url);
-    res.json(data);
+    // Clean up URL (remove tracking params)
+    const cleanUrl = url.split("?")[0];
+
+    // Instagram oEmbed API (publicly available)
+    const apiUrl = `https://www.instagram.com/oembed/?url=${encodeURIComponent(cleanUrl)}&omitscript=true`;
+
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      return res.status(404).json({ error: "Failed to fetch data from Instagram" });
+    }
+
+    const data = await response.json();
+
+    // Return useful info
+    res.json({
+      mediaType: data.thumbnail_url?.endsWith(".mp4") ? "video" : "image",
+      thumbnail: data.thumbnail_url,
+      caption: data.title || "",
+      author: data.author_name || "",
+      originalUrl: cleanUrl,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to scrape media" });
+    console.error("Error fetching from Instagram oEmbed:", err);
+    res.status(500).json({ error: "Unable to fetch data" });
   }
 });
 
-app.get("/download", async (req, res) => {
-  const { url, type = "image" } = req.query;
-  if (!url) return res.status(400).json({ error: "Missing ?url=" });
-
-  try {
-    const data = await scrapeInstagram(url);
-    const mediaUrl = type === "video" ? data.video : data.image;
-
-    if (!mediaUrl)
-      return res.status(404).json({ error: "No media found for this post" });
-
-    const mediaResponse = await fetch(mediaUrl);
-    res.set("Content-Type", mediaResponse.headers.get("content-type"));
-    res.set(
-      "Content-Disposition",
-      `attachment; filename="instagram_${type}.${type === "video" ? "mp4" : "jpg"}"`
-    );
-    mediaResponse.body.pipe(res);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Download failed" });
-  }
-});
-
-// ✅ Catch-all (Express 5 compatible)
+// --- Serve Frontend ---
 app.get(/.*/, (req, res) => {
   res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Start server
+app.listen(port, () => {
+  console.log(`✅ Server running on port ${port}`);
+});
