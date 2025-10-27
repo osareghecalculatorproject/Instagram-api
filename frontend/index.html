@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Downloader</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>📸 Instagram Downloader</h1>
+    <input type="text" id="urlInput" placeholder="Paste Instagram post URL here..." />
+    <div class="buttons">
+      <button id="fetchBtn">Fetch Info</button>
+      <button id="downloadBtn" disabled>Download</button>
+    </div>
+
+    <div id="result" class="result hidden">
+      <h3>Preview:</h3>
+      <div id="mediaPreview"></div>
+      <p id="caption"></p>
+    </div>
+
+    <footer>
+      <p>Powered by your custom API 🚀</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
