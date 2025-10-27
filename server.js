@@ -27,6 +27,7 @@ async function getBrowser() {
 
 // Scrape function
 async function scrapeInstagram(url) {
+  const cleanUrl = url.split("?")[0]; // remove ?utm_source etc.
   const browser = await getBrowser();
   const page = await browser.newPage();
 
@@ -34,7 +35,10 @@ async function scrapeInstagram(url) {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119 Safari/537.36"
   );
 
-  await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+  await page.goto(cleanUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+  // Wait for meta tags to appear
+  await page.waitForSelector("meta[property='og:image']", { timeout: 15000 }).catch(() => {});
 
   const meta = await page.evaluate(() => {
     const tags = {};
