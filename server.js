@@ -15,7 +15,15 @@ app.use(express.static(path.join(__dirname, "frontend")));
 
 // --- Catch-all route to serve index.html ---
 // ✅ Compatible with Express 5
-app.get("/*", (req, res) => {
+// ✅ works on Express 5 and Node 22
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Catch-all route using regex
+app.get(/.*/, (req, res) => {
   res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
 
