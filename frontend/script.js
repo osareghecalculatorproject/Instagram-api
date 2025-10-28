@@ -1,4 +1,4 @@
-const API_BASE = "https://instagram-api-qc4o.onrender.com"; // change this to your actual API base
+const API_BASE = "https://instagram-api.pages.dev/"; // change this to your actual API base
 
 const urlInput = document.getElementById("urlInput");
 const fetchBtn = document.getElementById("fetchBtn");
